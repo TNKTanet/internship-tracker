@@ -1,7 +1,4 @@
 {
-  "version": 2,
-  "rewrites": [
-    { "source": "/api/sync-sheet", "destination": "/api/sync-sheet.py" },
-    { "source": "/api/update-sheet", "destination": "/api/update-sheet.py" }
-  ]
+  "framework": null,
+  "cleanUrls": true
 }
