@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>internlist — ระบบติดตามฝึกงานสหกิจศึกษา (Real-Time Google Sheet Sync)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Prompt & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'Plus Jakarta Sans', 'sans-serif'],
+          },
+          boxShadow: {
+            'soft': '0 4px 20px -2px rgba(14, 165, 233, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04)',
+            'card': '0 4px 24px -4px rgba(15, 23, 42, 0.06), 0 2px 8px -2px rgba(14, 165, 233, 0.04)',
+            'card-hover': '0 16px 32px -6px rgba(14, 165, 233, 0.14), 0 6px 12px -3px rgba(15, 23, 42, 0.05)',
+            'btn': '0 2px 5px 0 rgba(15, 23, 42, 0.06)',
+            'glow-blue': '0 0 0 3px rgba(14, 165, 233, 0.22)',
+            'glow-emerald': '0 0 0 3px rgba(16, 185, 129, 0.25)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-sky-500 selection:text-white">
+
+  <!-- ======================================================== -->
+  <!-- TOP NAVBAR (สไตล์ Manus internlist + โทนขาว-ฟ้าสดใส)       -->
+  <!-- ======================================================== -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-sky-100/90 shadow-soft">
+    <div class="w-full max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-10 h-18 py-3 flex items-center justify-between gap-3">
+      
+      <!-- Left: Hamburger 3 ขีด + internlist Brand -->
+      <div class="flex items-center gap-3 shrink-0">
+        <button onclick="toggleSidebar()" class="btn-interactive p-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/70 shadow-btn cursor-pointer shrink-0" title="เมนูหลัก (3 ขีด)">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+
+        <div class="flex items-center gap-3 cursor-pointer shrink-0" onclick="switchPage('feed')">
+          <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/25 shrink-0">
+            <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+          </div>
+          <div class="whitespace-nowrap">
+            <div class="flex items-center gap-2">
+              <span class="text-xl font-extrabold text-slate-900 tracking-tight leading-none">internlist</span>
+              <span class="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200">
+                ✨ SPU CWIE
+              </span>
+            </div>
+            <p class="text-[11px] font-semibold tracking-wider text-slate-400 uppercase mt-0.5">INTERNSHIP TRACKER • REAL-TIME</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: View Switcher Tabs -->
+      <div class="hidden xl:flex items-center gap-1 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/70 shrink-0">
+        <button onclick="switchPage('feed')" id="top-nav-feed" class="btn-interactive whitespace-nowrap px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-sky-700 shadow-xs border border-sky-100 transition">
+          🏢 รายการบริษัท
+        </button>
+        <button onclick="switchPage('kanban')" id="top-nav-kanban" class="btn-interactive whitespace-nowrap px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 hover:text-sky-700 transition">
+          📋 กระดาน Kanban
+        </button>
+        <button onclick="switchPage('zones')" id="top-nav-zones" class="btn-interactive whitespace-nowrap px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 hover:text-sky-700 transition">
+          🗺️ 4 โซนเดินทาง
+        </button>
+        <button onclick="switchPage('logs')" id="top-nav-logs" class="btn-interactive whitespace-nowrap px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 hover:text-sky-700 transition flex items-center gap-1.5">
+          <span>📞 ประวัติติดตาม</span>
+          <span id="topLogCount" class="text-xs px-2 py-0.2 rounded-full bg-sky-100 text-sky-700 font-bold">0</span>
+        </button>
+        <button onclick="switchPage('cheatsheet')" id="top-nav-cheatsheet" class="btn-interactive whitespace-nowrap px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-amber-700 hover:bg-amber-50 transition flex items-center gap-1">
+          <span>🗣️ โพยคุย HR</span>
+        </button>
+      </div>
+
+      <!-- Right: User Status + Real-time Sheet Sync + Add Company (Exact Manus Actions) -->
+      <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+        <!-- User & Sync Status Pill -->
+        <div class="hidden 2xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-xs font-semibold text-slate-700 whitespace-nowrap shrink-0">
+          <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+          <span>Tanet Kulsatan</span>
+          <span id="lastSyncBadge" class="text-[11px] text-slate-400 border-l border-slate-200 pl-2">ซิงก์ล่าสุด: พร้อมใช้งาน</span>
+        </div>
+
+        <!-- Sync from Google Sheet Button -->
+        <button onclick="syncFromGoogleSheet(false)" id="btnSyncSheet" class="btn-interactive whitespace-nowrap shrink-0 px-3.5 py-2.5 rounded-2xl bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-700 border border-slate-200 hover:border-sky-300 text-xs sm:text-sm font-bold flex items-center gap-2 shadow-btn cursor-pointer" title="ดึงข้อมูลล่าสุดจาก Google Sheet แบบเรียลไทม์">
+          <i data-lucide="refresh-cw" id="syncIcon" class="w-4 h-4 text-sky-600 shrink-0"></i>
+          <span>ซิงก์จากชีต</span>
+        </button>
+
+        <!-- Add Company Button -->
+        <button onclick="openAddCompanyModal()" class="btn-interactive whitespace-nowrap shrink-0 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-md shadow-sky-600/25 cursor-pointer">
+          <i data-lucide="plus" class="w-4 h-4 shrink-0"></i>
+          <span>เพิ่มบริษัท</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- SIDEBAR DRAWER (เมนู 3 ขีด)                                -->
+  <!-- ======================================================== -->
+  <div id="sidebarBackdrop" onclick="toggleSidebar()" class="fixed inset-0 z-50 bg-slate-900/35 backdrop-blur-xs hidden transition-opacity"></div>
+  
+  <aside id="drawerSidebar" class="fixed top-0 bottom-0 left-0 z-50 w-80 bg-white border-r border-sky-100 shadow-2xl flex flex-col justify-between -translate-x-full transition-transform duration-200">
+    <div>
+      <div class="p-5 border-b border-sky-100 flex items-center justify-between bg-gradient-to-r from-sky-50 to-white">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+            <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-base leading-tight">internlist เมนูหลัก</h3>
+            <p class="text-xs text-sky-600 font-medium">เลือกสลับหน้าการใช้งาน</p>
+          </div>
+        </div>
+        <button onclick="toggleSidebar()" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-2 text-sm font-medium">
+        <button onclick="switchPage('feed')" class="btn-interactive w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+          <i data-lucide="layout-grid" class="w-5 h-5 text-sky-600"></i>
+          <span class="font-semibold">🏢 รายการบริษัท (Manus Cards)</span>
+        </button>
+        <button onclick="switchPage('kanban')" class="btn-interactive w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+          <i data-lucide="kanban" class="w-5 h-5 text-indigo-500"></i>
+          <span class="font-semibold">📋 กระดานติดตาม (Kanban Board)</span>
+        </button>
+        <button onclick="switchPage('zones')" class="btn-interactive w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+          <i data-lucide="map" class="w-5 h-5 text-emerald-500"></i>
+          <span class="font-semibold">🗺️ จัดอันดับตาม 4 โซนการเดินทาง</span>
+        </button>
+        <button onclick="switchPage('logs')" class="btn-interactive w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition">
+          <i data-lucide="history" class="w-5 h-5 text-purple-500"></i>
+          <span class="font-semibold">📞 ประวัติการโทร & บันทึกติดตาม</span>
+        </button>
+        <button onclick="switchPage('cheatsheet')" class="btn-interactive w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-amber-900 bg-amber-50/80 border border-amber-200 transition">
+          <i data-lucide="message-square-quote" class="w-5 h-5 text-amber-600"></i>
+          <span class="font-bold">🗣️ โพยสคริปต์โทรคุยกับ HR</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Actions in Drawer -->
+    <div class="p-5 border-t border-sky-100 bg-slate-50/70 space-y-3 text-xs">
+      <div class="p-3 rounded-xl bg-white border border-sky-100 space-y-2">
+        <div class="font-bold text-slate-700 flex items-center gap-1.5">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> การเชื่อมต่อ Google Sheet
+        </div>
+        <button onclick="syncFromGoogleSheet(true)" class="w-full py-2 px-3 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold transition flex items-center justify-center gap-1.5">
+          <i data-lucide="cloud-download" class="w-4 h-4"></i> ดึงข้อมูลสดจากชีตทับทั้งหมด
+        </button>
+      </div>
+      <div class="flex items-center justify-between pt-1">
+        <button onclick="exportData()" class="btn-interactive text-sky-600 hover:underline flex items-center gap-1.5 font-bold">
+          <i data-lucide="download" class="w-4 h-4"></i> สำรองไฟล์ JSON
+        </button>
+        <button onclick="resetData()" class="btn-interactive text-rose-500 hover:underline flex items-center gap-1.5 font-bold">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i> รีเซ็ตค่าเริ่มต้น
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-5 py-3.5 bg-slate-900/95 backdrop-blur-md text-white text-sm font-semibold rounded-2xl shadow-2xl border border-slate-700">
+    <div class="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+      <i data-lucide="check" class="w-4 h-4"></i>
+    </div>
+    <span id="toast-msg">บันทึกข้อมูลเรียบร้อย!</span>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MAIN WORKSPACE CONTAINER                                 -->
+  <!-- ======================================================== -->
+  <main class="flex-1 w-full max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+
+    <!-- ====================================================== -->
+    <!-- 1. MAIN FEED PAGE (โครงสร้าง Manus + สีสันขาวฟ้าสดใส)    -->
+    <!-- ====================================================== -->
+    <div id="page-feed" class="view-page active space-y-8">
+
+      <!-- HERO SECTION (เหมือนรูป 1 ของ Manus เป๊ะ แต่โทนขาว-ฟ้าสดใส) -->
+      <section class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pt-2">
+        <div class="space-y-3 max-w-2xl">
+          <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-sky-100/80 border border-sky-200 text-sky-700 text-xs sm:text-sm font-bold">
+            <i data-lucide="sparkles" class="w-4 h-4 text-sky-600"></i>
+            <span>จัดการเส้นทางฝึกงานสหกิจของคุณ</span>
+          </div>
+          <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
+            ทุกโอกาสฝึกงาน<br>
+            <span class="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">อยู่ในสายตา</span>
+          </h1>
+          <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+            รวมข้อมูลบริษัท เหตุผลที่สนใจ โซนการเดินทาง และความคืบหน้าการสมัครไว้ในหน้าเดียว จะได้รู้ว่าต้องตามบริษัทไหนต่อทันที
+          </p>
+        </div>
+
+        <!-- Google Sheet Connection Card (ขวามือเหมือน Manus) -->
+        <div class="bg-white/95 backdrop-blur-xs rounded-3xl border border-sky-200/80 p-4 sm:p-5 shadow-card flex items-center gap-4 max-w-md w-full hover:border-sky-400 transition group">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-50 to-sky-50 border border-emerald-200/70 flex items-center justify-center text-emerald-600 shrink-0 shadow-xs">
+            <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-bold text-slate-900">เชื่อมกับชีตของคุณ (Real-Time)</h3>
+              <span class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">LIVE</span>
+            </div>
+            <p class="text-xs text-slate-500 truncate mt-0.5">ซิงก์ข้อมูลบริษัทและสถานะต้นทางอัตโนมัติ</p>
+            <div class="flex items-center gap-3 mt-2 text-xs font-bold">
+              <button onclick="syncFromGoogleSheet(false)" class="text-sky-600 hover:text-sky-800 flex items-center gap-1 cursor-pointer">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> ดึงข้อมูลสด
+              </button>
+              <span class="text-slate-300">|</span>
+              <a href="https://docs.google.com/spreadsheets/d/1uXyB0U9ewC7EErKhjgpMl5nLNTV2LOgv9uq29emxlDo/edit?gid=688658522#gid=688658522" target="_blank" class="text-emerald-600 hover:underline flex items-center gap-1">
+                <span>เปิด Google Sheet</span>
+                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+              </a>
+            </div>
+          </div>
+          <a href="https://docs.google.com/spreadsheets/d/1uXyB0U9ewC7EErKhjgpMl5nLNTV2LOgv9uq29emxlDo/edit?gid=688658522#gid=688658522" target="_blank" 
+             class="btn-interactive w-10 h-10 rounded-xl bg-slate-50 hover:bg-sky-50 border border-slate-200 hover:border-sky-300 flex items-center justify-center text-slate-600 hover:text-sky-600 shrink-0" title="เปิด Google Sheet ต้นทาง">
+            <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+          </a>
+        </div>
+      </section>
+
+      <!-- ====================================================== -->
+      <!-- 5 INTERACTIVE TOP KPI CARDS (กดคลิกกรองได้ทุกอัน!)       -->
+      <!-- ====================================================== -->
+      <!-- ====================================================== -->
+      <!-- 6 INTERACTIVE TOP KPI CARDS (แยก 'สัมภาษณ์' กับ 'ได้แล้ว' ชัดเจน!) -->
+      <!-- ====================================================== -->
+      <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
+        
+        <!-- Card 1: บริษัททั้งหมด -->
+        <button onclick="handleTopKpiClick('all')" id="kpi-card-all" 
+                class="kpi-card btn-interactive text-left relative overflow-hidden bg-white rounded-3xl p-4 sm:p-5 border-2 border-sky-500 shadow-card-hover ring-4 ring-sky-500/10 cursor-pointer transition-all">
+          <div class="kpi-circle bg-sky-100/70"></div>
+          <div class="relative z-10 flex items-start justify-between gap-1">
+            <span class="text-xs sm:text-sm font-bold text-slate-600">บริษัททั้งหมด</span>
+            <div class="w-9 h-9 rounded-2xl bg-sky-50 border border-sky-200/80 text-sky-600 flex items-center justify-center shrink-0 shadow-xs">
+              <i data-lucide="building-2" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </div>
+          </div>
+          <div class="relative z-10 mt-2">
+            <div id="count-all" class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">59</div>
+            <div class="text-[11px] font-medium text-sky-600 mt-1 truncate">รายการทั้งหมดในชีต</div>
+          </div>
+        </button>
+
+        <!-- Card 2: เล็งไว้ (ยังไม่ยื่น) -->
+        <button onclick="handleTopKpiClick('target')" id="kpi-card-target" 
+                class="kpi-card btn-interactive text-left relative overflow-hidden bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 hover:border-blue-400 shadow-card cursor-pointer transition-all">
+          <div class="kpi-circle bg-blue-100/60"></div>
+          <div class="relative z-10 flex items-start justify-between gap-1">
+            <span class="text-xs sm:text-sm font-bold text-slate-600">เล็งไว้ (ยังไม่ยื่น)</span>
+            <div class="w-9 h-9 rounded-2xl bg-blue-50 border border-blue-200/80 text-blue-600 flex items-center justify-center shrink-0 shadow-xs">
+              <i data-lucide="sparkles" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </div>
+          </div>
+          <div class="relative z-10 mt-2">
+            <div id="count-target" class="text-2xl sm:text-3xl font-extrabold text-blue-600 tracking-tight">0</div>
+            <div class="text-[11px] font-medium text-slate-500 mt-1 truncate">คัดผ่าน รอกดยื่น</div>
+          </div>
+        </button>
+
+        <!-- Card 3: ส่งใบสมัครแล้ว (รอผล) -->
+        <button onclick="handleTopKpiClick('applied')" id="kpi-card-applied" 
+                class="kpi-card btn-interactive text-left relative overflow-hidden bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 hover:border-amber-400 shadow-card cursor-pointer transition-all">
+          <div class="kpi-circle bg-amber-100/60"></div>
+          <div class="relative z-10 flex items-start justify-between gap-1">
+            <span class="text-xs sm:text-sm font-bold text-slate-600">ส่งใบสมัครแล้ว</span>
+            <div class="w-9 h-9 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-600 flex items-center justify-center shrink-0 shadow-xs">
+              <i data-lucide="send" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </div>
+          </div>
+          <div class="relative z-10 mt-2">
+            <div id="count-applied" class="text-2xl sm:text-3xl font-extrabold text-amber-600 tracking-tight">0</div>
+            <div class="text-[11px] font-medium text-slate-500 mt-1 truncate">ยื่นเรซูเม่แล้ว รอ HR</div>
+          </div>
+        </button>
+
+        <!-- Card 4: โทร/เมลตามผลแล้ว -->
+        <button onclick="handleTopKpiClick('following_up')" id="kpi-card-following_up" 
+                class="kpi-card btn-interactive text-left relative overflow-hidden bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 hover:border-purple-400 shadow-card cursor-pointer transition-all">
+          <div class="kpi-circle bg-purple-100/60"></div>
+          <div class="relative z-10 flex items-start justify-between gap-1">
+            <span class="text-xs sm:text-sm font-bold text-slate-600 truncate">โทรตามผลแล้ว</span>
+            <div class="w-9 h-9 rounded-2xl bg-purple-50 border border-purple-200/80 text-purple-600 flex items-center justify-center shrink-0 shadow-xs">
+              <i data-lucide="phone-forwarded" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </div>
+          </div>
+          <div class="relative z-10 mt-2">
+            <div id="count-following" class="text-2xl sm:text-3xl font-extrabold text-purple-600 tracking-tight">0</div>
+            <div class="text-[11px] font-medium text-slate-500 mt-1 truncate">กำลังตามผลกับ HR</div>
+          </div>
+        </button>
+
+        <!-- Card 5: นัดสัมภาษณ์แล้ว (Col R) -->
+        <button onclick="handleTopKpiClick('interview')" id="kpi-card-interview" 
+                class="kpi-card btn-interactive text-left relative overflow-hidden bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 hover:border-blue-500 shadow-card cursor-pointer transition-all">
+          <div class="kpi-circle bg-blue-100/60"></div>
+          <div class="relative z-10 flex items-start justify-between gap-1">
+            <span class="text-xs sm:text-sm font-bold text-slate-600 truncate">💼 นัดสัมภาษณ์</span>
+            <div class="w-9 h-9 rounded-2xl bg-blue-50 border border-blue-200/80 text-blue-600 flex items-center justify-center shrink-0 shadow-xs">
+              <i data-lucide="calendar-check" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </div>
+          </div>
+          <div class="relative z-10 mt-2">
+            <div id="count-interview" class="text-2xl sm:text-3xl font-extrabold text-blue-600 tracking-tight">0</div>
+            <div class="text-[11px] font-medium text-slate-500 mt-1 truncate">รอสัม / รอผลสัม</div>
+          </div>
+        </button>
+
+        <!-- Card 6: ได้ที่ฝึกงานแล้ว! (Col T) -->
+        <button onclick="handleTopKpiClick('accepted')" id="kpi-card-accepted" 
+                class="kpi-card btn-interactive text-left relative overflow-hidden bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 hover:border-emerald-500 shadow-card cursor-pointer transition-all">
+          <div class="kpi-circle bg-emerald-100/70"></div>
+          <div class="relative z-10 flex items-start justify-between gap-1">
+            <span class="text-xs sm:text-sm font-bold text-slate-600 truncate">🏆 ได้ที่ฝึกงานแล้ว</span>
+            <div class="w-9 h-9 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-600 flex items-center justify-center shrink-0 shadow-xs">
+              <i data-lucide="award" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </div>
+          </div>
+          <div class="relative z-10 mt-2">
+            <div id="count-accepted" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 tracking-tight">0</div>
+            <div class="text-[11px] font-medium text-emerald-600 font-semibold mt-1 truncate">ยืนยันรับเข้า / ส่งตัว</div>
+          </div>
+        </button>
+
+      </section>
+
+      <!-- ====================================================== -->
+      <!-- FILTER DOCK SECTION (ตัวกรองครบเครื่อง: โซน, เขต, เทียร์, สถานะ) -->
+      <!-- ====================================================== -->
+      <section class="space-y-4 pt-2">
+        
+        <!-- Section Title Row (เหมือนรูป 2 ของ Manus) -->
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+          <div>
+            <div class="text-xs font-bold text-sky-600 uppercase tracking-wider">รายการของคุณ</div>
+            <div class="flex items-center gap-3 mt-0.5">
+              <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">บริษัทที่กำลังติดตาม</h2>
+              <span id="feedMatchCount" class="px-3 py-0.5 rounded-full text-sm font-extrabold bg-sky-100 text-sky-700 border border-sky-200">59</span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-500">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-sky-100 text-slate-600 shadow-2xs">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+              <span>ข้อมูลซิงก์ตรงกับ Google Sheet + แก้ไขได้ตลอด</span>
+            </span>
+            <button onclick="resetAllFilters()" id="btnResetFilters" class="hidden btn-interactive px-3 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold flex items-center gap-1 cursor-pointer">
+              <i data-lucide="FilterX" class="w-3.5 h-3.5"></i> ล้างตัวกรองทั้งหมด
+            </button>
+          </div>
+        </div>
+
+        <!-- Unified Multi-Filter White-Sky Card -->
+        <div class="bg-white rounded-3xl border border-sky-100/90 shadow-card p-4 sm:p-5 space-y-3.5">
+          
+          <!-- Row 1: Search Bar + Sort + Quick View Toggle -->
+          <div class="flex flex-col lg:flex-row gap-3">
+            <!-- Search Input -->
+            <div class="relative flex-1">
+              <i data-lucide="search" class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-sky-500"></i>
+              <input type="text" id="globalSearchInput" oninput="handleSearch(this.value)" 
+                     placeholder="ค้นหาชื่อบริษัท, ตำแหน่งงาน, ตึก, เขต, เทคโนโลยี (เช่น React, Next.js) หรือเบอร์โทร..." 
+                     class="w-full pl-12 pr-10 py-3 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200/90 hover:border-sky-300 rounded-2xl text-sm placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 text-slate-900 font-medium transition">
+              <button onclick="clearSearchInput()" id="btnClearSearch" class="hidden absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                <i data-lucide="x-circle" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- Sort Order Select -->
+            <div class="flex items-center gap-2 bg-slate-50/70 hover:bg-white px-4 py-2.5 border border-slate-200/90 hover:border-sky-300 rounded-2xl text-sm font-semibold shrink-0 transition">
+              <i data-lucide="arrow-up-down" class="w-4 h-4 text-sky-600 shrink-0"></i>
+              <select id="sortOrderSelect" onchange="applyFilters()" class="bg-transparent text-slate-800 focus:outline-none cursor-pointer font-semibold text-sm">
+                <option value="no_asc">เรียงตามลำดับชีต (#1 → #59)</option>
+                <option value="tier_best">เรียงตามเทียร์ลิสต์ (ตัวเต็งขึ้นก่อน)</option>
+                <option value="zone_near">เรียงตามโซนใกล้บ้าน (สาทร/สีลม ก่อน)</option>
+                <option value="status_active">เรียงตามความคืบหน้าการสมัคร</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Row 2: 6 Multi-Filters (Col A ลำดับ, โซนเดินทาง, เขตพื้นที่, เทียร์ลิสต์, สถานะสมัคร, สถานะเปิดรับ) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            
+            <!-- 0. กรองลำดับ [Col A] -->
+            <div class="flex items-center gap-2 bg-slate-50/80 hover:bg-white px-3 py-2 border border-slate-200/90 hover:border-sky-300 rounded-2xl text-sm transition">
+              <i data-lucide="hash" class="w-4 h-4 text-sky-600 shrink-0"></i>
+              <select id="noFilterSelect" onchange="applyFilters()" class="bg-transparent text-slate-800 focus:outline-none cursor-pointer font-semibold w-full text-xs truncate">
+                <option value="all">🔢 ทุกอันดับ (#1 - #59)</option>
+                <option value="range_1_10">#1 - #10 (อันดับแรก)</option>
+                <option value="range_11_20">#11 - #20</option>
+                <option value="range_21_30">#21 - #30</option>
+                <option value="range_31_40">#31 - #40</option>
+                <option value="range_41_50">#41 - #50</option>
+                <option value="range_51_59">#51 - #59</option>
+                <optgroup label="เลือกดูรายบริษัท" id="noFilterCompanyList"></optgroup>
+              </select>
+            </div>
+
+            <!-- 1. กรองโซนการเดินทาง (4 โซน) [Col G] -->
+            <div class="flex items-center gap-2 bg-sky-50/40 hover:bg-sky-50/80 px-3 py-2 border border-sky-200/70 rounded-2xl text-sm transition">
+              <i data-lucide="compass" class="w-4 h-4 text-sky-600 shrink-0"></i>
+              <select id="zoneFilterSelect" onchange="applyFilters()" class="bg-transparent text-slate-800 focus:outline-none cursor-pointer font-semibold w-full text-xs truncate">
+                <option value="all">🧭 ทุกโซนเดินทาง</option>
+                <option value="zone1">🟢 โซน 1: สาทร/สีลม/พระราม 3</option>
+                <option value="zone2">🟡 โซน 2: ปทุมวัน/สยาม/พญาไท</option>
+                <option value="zone3">🟠 โซน 3: สุขุมวิท/อโศก/วัฒนา</option>
+                <option value="zone4">🔴 โซน 4: รัชดา/พระราม 9/รอบนอก</option>
+              </select>
+            </div>
+
+            <!-- 2. กรองเขตพื้นที่ (District) [Col G] -->
+            <div class="flex items-center gap-2 bg-slate-50/80 hover:bg-white px-3 py-2 border border-slate-200/90 hover:border-sky-300 rounded-2xl text-sm transition">
+              <i data-lucide="map-pin" class="w-4 h-4 text-blue-600 shrink-0"></i>
+              <select id="districtFilterSelect" onchange="applyFilters()" class="bg-transparent text-slate-800 focus:outline-none cursor-pointer font-semibold w-full text-xs truncate">
+                <option value="all">📍 ทุกเขตพื้นที่</option>
+                <!-- Populated dynamically from companies data -->
+              </select>
+            </div>
+
+            <!-- 3. กรองเทียร์ลิสต์ [Col J] (Tier List) -->
+            <div class="flex items-center gap-2 bg-amber-50/40 hover:bg-amber-50/80 px-3 py-2 border border-amber-200/80 rounded-2xl text-sm transition">
+              <i data-lucide="trophy" class="w-4 h-4 text-amber-600 shrink-0"></i>
+              <select id="tierFilterSelect" onchange="applyFilters()" class="bg-transparent text-slate-800 focus:outline-none cursor-pointer font-semibold w-full text-xs truncate">
+                <option value="all">🏆 ทุกเทียร์ [Col J]</option>
+                <option value="active">เอาทั้งหมด (Tier 1–4)</option>
+                <option value="✅">🟢 เอา — ✅ ผ่าน QC</option>
+                <option value="✅🔄">🟡 เอา — ✅🔄 เช็กเพิ่ม</option>
+                <option value="🔄✅">🟣 สำรองเด่น — 🔄✅</option>
+                <option value="🔄">🟠 สำรอง — 🔄</option>
+                <option value="❌">🔴 ไม่เอา — ❌ ปัดตก</option>
+              </select>
+            </div>
+
+            <!-- 4. กรองสถานะการสมัคร -->
+            <div class="flex items-center gap-2 bg-indigo-50/40 hover:bg-indigo-50/80 px-3 py-2 border border-indigo-200/70 rounded-2xl text-sm transition">
+              <i data-lucide="send" class="w-4 h-4 text-indigo-600 shrink-0"></i>
+              <select id="statusFilterSelect" onchange="applyFilters()" class="bg-transparent text-slate-800 focus:outline-none cursor-pointer font-semibold w-full text-xs truncate">
+                <option value="all">✈️ ทุกสถานะการสมัคร</option>
+                <option value="target">🎯 เล็งไว้ (ยังไม่ยื่น)</option>
+                <option value="applied">✈️ ส่งใบสมัครแล้ว (รอผล)</option>
+                <option value="following_up">🟣 โทร/เมลตามผลแล้ว</option>
+                <option value="interview">💼 นัดสัมภาษณ์แล้ว (Col R)</option>
+                <option value="accepted">🏆 ได้ที่ฝึกงานแล้ว! (Col T)</option>
+                <option value="dropped">⚪ ปัดตก / ไม่สมัคร</option>
+              </select>
+            </div>
+
+            <!-- 5. กรองสถานะเปิดรับสมัคร [Col N] -->
+            <div class="flex items-center gap-2 bg-emerald-50/40 hover:bg-emerald-50/80 px-3 py-2 border border-emerald-200/70 rounded-2xl text-sm transition">
+              <i data-lucide="radio" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+              <select id="openFilterSelect" onchange="applyFilters()" class="bg-transparent text-slate-800 focus:outline-none cursor-pointer font-semibold w-full text-xs truncate">
+                <option value="all">🟢 ทุกสถานะประกาศรับ [Col N]</option>
+                <option value="✅">🟢 เปิดรับสมัคร</option>
+                <option value="🔄">🟡 รอตรวจสอบ</option>
+                <option value="❌">🔴 ปิดรับแล้ว</option>
+              </select>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Status Sub-bar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm text-slate-500 px-1">
+          <div id="filterSummaryText">กำลังแสดง <strong class="text-sky-600 font-bold">59</strong> จาก 59 บริษัท</div>
+          <div class="flex items-center gap-1.5 text-slate-400">
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-sky-500"></i>
+            <span>อัปเดตสถานะและกดโทร/คัดลอกเมลได้จากการ์ดแต่ละใบทันที</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ====================================================== -->
+      <!-- 2-COLUMN MANUS-STYLE RICH COMPANY CARDS GRID           -->
+      <!-- ====================================================== -->
+      <section id="feedCardsGrid" class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+        <!-- Rendered dynamically by app.js -->
+      </section>
+
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- 2. KANBAN BOARD VIEW                                   -->
+    <!-- ====================================================== -->
+    <div id="page-kanban" class="view-page space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
+        <div>
+          <h3 class="text-xl sm:text-2xl font-extrabold text-slate-900">📋 กระดานติดตามงาน (Kanban Board)</h3>
+          <p class="text-xs sm:text-sm text-slate-500">ลากการ์ดย้ายคอลัมน์เพื่อเปลี่ยนสถานะการสมัครงานได้ทันที</p>
+        </div>
+        <button onclick="switchPage('feed')" class="btn-interactive self-start px-4 py-2 rounded-xl bg-white border border-sky-200 text-sky-700 text-xs sm:text-sm font-bold shadow-xs">
+          ← กลับหน้ารายการบริษัท
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4 overflow-x-auto w-full pb-6">
+        <!-- Col: Target -->
+        <div class="bg-white/80 rounded-3xl border border-sky-100 flex flex-col overflow-hidden shadow-card">
+          <div class="p-3.5 sm:p-4 bg-gradient-to-r from-blue-50 to-white border-b border-sky-100 flex items-center justify-between">
+            <span class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5 truncate">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span> 🎯 เล็งไว้
+            </span>
+            <span id="kcount-target" class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold shrink-0">0</span>
+          </div>
+          <div id="col-target" class="p-3 flex flex-col gap-3 flex-1 min-h-[520px]"
+               ondragover="allowDrop(event)" ondragleave="dropLeave(event)" ondrop="handleDrop(event, 'target')"></div>
+        </div>
+
+        <!-- Col: Applied -->
+        <div class="bg-white/80 rounded-3xl border border-sky-100 flex flex-col overflow-hidden shadow-card">
+          <div class="p-3.5 sm:p-4 bg-gradient-to-r from-amber-50 to-white border-b border-amber-100 flex items-center justify-between">
+            <span class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5 truncate">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span> ✈️ ยื่นแล้ว
+            </span>
+            <span id="kcount-applied" class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold shrink-0">0</span>
+          </div>
+          <div id="col-applied" class="p-3 flex flex-col gap-3 flex-1 min-h-[520px]"
+               ondragover="allowDrop(event)" ondragleave="dropLeave(event)" ondrop="handleDrop(event, 'applied')"></div>
+        </div>
+
+        <!-- Col: Following Up -->
+        <div class="bg-white/80 rounded-3xl border border-sky-100 flex flex-col overflow-hidden shadow-card">
+          <div class="p-3.5 sm:p-4 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100 flex items-center justify-between">
+            <span class="text-xs sm:text-sm font-bold text-purple-800 flex items-center gap-1.5 truncate">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse shrink-0"></span> 📞 โทรตามแล้ว
+            </span>
+            <span id="kcount-following_up" class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold shrink-0">0</span>
+          </div>
+          <div id="col-following_up" class="p-3 flex flex-col gap-3 flex-1 min-h-[520px]"
+               ondragover="allowDrop(event)" ondragleave="dropLeave(event)" ondrop="handleDrop(event, 'following_up')"></div>
+        </div>
+
+        <!-- Col: Interview -->
+        <div class="bg-white/80 rounded-3xl border border-sky-100 flex flex-col overflow-hidden shadow-card">
+          <div class="p-3.5 sm:p-4 bg-gradient-to-r from-blue-50 to-white border-b border-blue-200 flex items-center justify-between">
+            <span class="text-xs sm:text-sm font-bold text-blue-900 flex items-center gap-1.5 truncate">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse shrink-0"></span> 💼 นัดสัมภาษณ์
+            </span>
+            <span id="kcount-interview" class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold shrink-0">0</span>
+          </div>
+          <div id="col-interview" class="p-3 flex flex-col gap-3 flex-1 min-h-[520px]"
+               ondragover="allowDrop(event)" ondragleave="dropLeave(event)" ondrop="handleDrop(event, 'interview')"></div>
+        </div>
+
+        <!-- Col: Accepted -->
+        <div class="bg-white/80 rounded-3xl border border-emerald-200 flex flex-col overflow-hidden shadow-card ring-2 ring-emerald-500/20">
+          <div class="p-3.5 sm:p-4 bg-gradient-to-r from-emerald-100/90 to-teal-50 border-b border-emerald-200 flex items-center justify-between">
+            <span class="text-xs sm:text-sm font-extrabold text-emerald-900 flex items-center gap-1.5 truncate">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-bounce shrink-0"></span> 🏆 ได้ที่ฝึกงานแล้ว!
+            </span>
+            <span id="kcount-accepted" class="text-xs px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900 font-extrabold shrink-0">0</span>
+          </div>
+          <div id="col-accepted" class="p-3 flex flex-col gap-3 flex-1 min-h-[520px]"
+               ondragover="allowDrop(event)" ondragleave="dropLeave(event)" ondrop="handleDrop(event, 'accepted')"></div>
+        </div>
+
+        <!-- Col: Dropped -->
+        <div class="bg-white/80 rounded-3xl border border-sky-100 flex flex-col overflow-hidden shadow-card">
+          <div class="p-3.5 sm:p-4 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between">
+            <span class="text-xs sm:text-sm font-bold text-slate-600 flex items-center gap-1.5 truncate">
+              <span class="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0"></span> 🏁 ปัดตก / ไม่เอา
+            </span>
+            <span id="kcount-dropped" class="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold shrink-0">0</span>
+          </div>
+          <div id="col-dropped" class="p-3 flex flex-col gap-3 flex-1 min-h-[520px]"
+               ondragover="allowDrop(event)" ondragleave="dropLeave(event)" ondrop="handleDrop(event, 'dropped')"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- 3. ZONES VIEW (4 โซนการเดินทาง)                         -->
+    <!-- ====================================================== -->
+    <div id="page-zones" class="view-page space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 class="text-xl sm:text-2xl font-extrabold text-slate-900">🗺️ จัดกลุ่มบริษัทตาม 4 โซนการเดินทาง (จากบ้านพระราม 3 / สาทร)</h3>
+          <p class="text-xs sm:text-sm text-slate-500">ช่วยให้มึงเปรียบเทียบความคุ้มค่าในการเดินทางไปกลับแต่ละโซนได้ง่ายที่สุด</p>
+        </div>
+        <button onclick="switchPage('feed')" class="btn-interactive self-start px-4 py-2 rounded-xl bg-white border border-sky-200 text-sky-700 text-xs sm:text-sm font-bold shadow-xs">
+          ← กลับหน้ารายการบริษัท
+        </button>
+      </div>
+      <div id="zonesGridContainer" class="space-y-6"></div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- 4. CALL LOGS VIEW                                      -->
+    <!-- ====================================================== -->
+    <div id="page-logs" class="view-page space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 class="text-xl sm:text-2xl font-extrabold text-slate-900">📞 ประวัติการโทร & บันทึกการติดตามผล</h3>
+          <p class="text-xs sm:text-sm text-slate-500">รวมทุกบริษัทที่มึงส่งเมลหรือโทรคุยกับ HR แล้ว</p>
+        </div>
+        <button onclick="switchPage('feed')" class="btn-interactive self-start px-4 py-2 rounded-xl bg-white border border-sky-200 text-sky-700 text-xs sm:text-sm font-bold shadow-xs">
+          ← กลับหน้ารายการบริษัท
+        </button>
+      </div>
+      <div id="logsCardsContainer" class="space-y-4"></div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- 5. HR CHEAT SHEET VIEW                                 -->
+    <!-- ====================================================== -->
+    <div id="page-cheatsheet" class="view-page space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 class="text-xl sm:text-2xl font-extrabold text-slate-900">🗣️ โพยบทพูดโทรคุยกับ HR (Cheat Sheet)</h3>
+          <p class="text-xs sm:text-sm text-slate-500">อ่านตามนี้ได้เลย สุภาพ มั่นใจ ได้ใจพี่ HR 100%</p>
+        </div>
+        <button onclick="switchPage('feed')" class="btn-interactive self-start px-4 py-2 rounded-xl bg-white border border-sky-200 text-sky-700 text-xs sm:text-sm font-bold shadow-xs">
+          ← กลับหน้ารายการบริษัท
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white border border-sky-100 rounded-3xl p-6 space-y-4 shadow-card">
+          <div class="flex items-center gap-2 text-amber-800 font-bold text-base pb-3 border-b border-slate-100">
+            <i data-lucide="phone-outgoing" class="w-5 h-5 text-amber-600"></i>
+            <span>1. โทรติดตามผล (ส่งไป 3–5 วันแล้ว)</span>
+          </div>
+          <div class="text-sm text-slate-700 leading-relaxed space-y-3 bg-amber-50/70 p-4 rounded-2xl border border-amber-200/80">
+            <p>"สวัสดีครับ ขอสายฝ่ายบุคคล/แผนกสรรหา (HR) ครับ พอดีผมชื่อ <strong>ธเนศวร์ กุลสะท้าน</strong> จากคณะวิศวกรรมศาสตร์ มหาวิทยาลัยศรีปทุมครับ"</p>
+            <p>"พอดีผมได้ส่งใบสมัครตำแหน่ง <strong>Software Engineer Intern (สหกิจศึกษา)</strong> ไปเมื่อวันที่ [ระบุวันที่ส่ง] เลยอยากโทรมาสอบถามว่าพี่ HR ได้รับเอกสารและ Portfolio ครบถ้วนไหมครับ"</p>
+          </div>
+          <div class="text-xs text-slate-500">💡 <strong>ทริก:</strong> โทรช่วง 10:30–11:30 น. หรือ 14:00–15:30 น. เป็นเวลาทองที่ HR ว่างรับสายที่สุด</div>
+        </div>
+
+        <div class="bg-white border border-sky-100 rounded-3xl p-6 space-y-4 shadow-card">
+          <div class="flex items-center gap-2 text-sky-800 font-bold text-base pb-3 border-b border-slate-100">
+            <i data-lucide="calendar" class="w-5 h-5 text-sky-600"></i>
+            <span>2. สอบถามโควต้าสหกิจ 4 เดือน</span>
+          </div>
+          <div class="text-sm text-slate-700 leading-relaxed space-y-3 bg-sky-50/70 p-4 rounded-2xl border border-sky-200/80">
+            <p>"สวัสดีครับ อยากสอบถามเรื่องโครงการฝึกงานสหกิจศึกษาครับ พอดีผมเป็นนักศึกษาปี 4 วิศวะคอมฯ SPU สนใจอยากร่วมฝึกงานสาย <strong>Fullstack / Web Development</strong>"</p>
+            <p>"ในช่วงเดือน <strong>มกราคม ถึง เมษายน 2570 (ระยะเวลา 4 เดือนเต็ม)</strong> ไม่ทราบว่าทางทีมยังเปิดรับโควต้าอยู่ไหมครับ"</p>
+          </div>
+          <div class="text-xs text-slate-500">💡 <strong>ทริก:</strong> ย้ำว่าฝึกได้ 4 เดือนเต็ม และพร้อมทำโปรเจกต์จริงร่วมกับพี่เลี้ยง</div>
+        </div>
+
+        <div class="bg-white border border-sky-100 rounded-3xl p-6 space-y-4 shadow-card">
+          <div class="flex items-center gap-2 text-emerald-800 font-bold text-base pb-3 border-b border-slate-100">
+            <i data-lucide="file-check" class="w-5 h-5 text-emerald-600"></i>
+            <span>3. ขอทำจดหมายส่งตัวจากคณะ</span>
+          </div>
+          <div class="text-sm text-slate-700 leading-relaxed space-y-3 bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200/80">
+            <p>"ขอบคุณทางพี่ๆ มากครับ เดี๋ยวผมจะรีบแจ้งอาจารย์ที่ปรึกษาสหกิจที่มหาวิทยาลัย เพื่อให้ออก <strong>'หนังสือขอความอนุเคราะห์ฝึกงาน / ส่งตัวนักศึกษา'</strong> ส่งมาให้ทางบริษัทครับ"</p>
+            <p>"ไม่ทราบว่าต้องระบุจ่าหน้าเรียนท่านใด (ชื่อ-นามสกุล และตำแหน่ง) และส่งเข้าอีเมลไหนได้บ้างครับ"</p>
+          </div>
+          <div class="text-xs text-slate-500">💡 <strong>ทริก:</strong> จดชื่อ-นามสกุลและตำแหน่งผู้รับเอกสารไว้กรอกในระบบสหกิจ SPU</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 1: FULL EDIT / ADD COMPANY (เหมือนรูป 4 & 5 ของ Manus เป๊ะ!) -->
+  <!-- ======================================================== -->
+  <div id="editCompanyModal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 hidden">
+    <div class="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-sky-100 overflow-hidden">
+      
+      <!-- Modal Sticky Header -->
+      <div class="px-6 sm:px-8 pt-6 pb-4 bg-gradient-to-r from-sky-50/80 via-white to-blue-50/50 border-b border-slate-100 flex items-start justify-between gap-4 shrink-0">
+        <div>
+          <div id="editModalEyebrow" class="text-xs font-bold text-sky-600 uppercase tracking-wider">ข้อมูลฝึกงาน</div>
+          <h3 id="editModalTitle" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">รายละเอียดบริษัท</h3>
+          <p class="text-xs sm:text-sm text-slate-500 mt-0.5">ข้อมูลละเอียดจาก Google Sheet เพื่อใช้ติดตามผลและติดต่อสอบถาม</p>
+        </div>
+        <button onclick="closeEditModal()" class="btn-interactive w-10 h-10 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Scrollable Form Body -->
+      <div class="px-6 sm:px-8 py-6 overflow-y-auto space-y-5 flex-1 text-sm">
+        
+        <!-- 0. ลำดับที่ [Col A] & 1. ชื่อบริษัท [Col B] -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs sm:text-sm font-bold text-slate-800">
+                ลำดับที่ (No)
+              </label>
+              <span class="text-xs text-slate-400 font-mono font-normal">[Col A]</span>
+            </div>
+            <input type="number" id="formNo" 
+                   class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-900 font-extrabold text-base focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500">
+          </div>
+          <div class="sm:col-span-3">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs sm:text-sm font-bold text-slate-800">
+                ชื่อบริษัท
+              </label>
+              <span class="text-xs text-slate-400 font-mono font-normal">[Col B]</span>
+            </div>
+            <input type="text" id="formName" 
+                   class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-900 font-semibold focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500">
+          </div>
+        </div>
+
+        <!-- 2. ตำแหน่งงาน / รายละเอียดงาน [Col H] -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs sm:text-sm font-bold text-slate-800">
+              ตำแหน่งงาน / รายละเอียดงาน
+            </label>
+            <span class="text-xs text-slate-400 font-mono font-normal">[Col H]</span>
+          </div>
+          <textarea id="formRole" rows="4" 
+                    class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 leading-relaxed min-h-[90px]"></textarea>
+        </div>
+
+        <!-- 3. เขต [Col G] & สถานที่ / Google Maps [Col E] -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs sm:text-sm font-bold text-slate-800">เขต / พื้นที่</label>
+              <span class="text-xs text-slate-400 font-mono font-normal">[Col G]</span>
+            </div>
+            <input type="text" id="formZone" 
+                   class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 font-medium focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500">
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs sm:text-sm font-bold text-slate-800">สถานที่ / อาคาร</label>
+              <span class="text-xs text-slate-400 font-mono font-normal">[Col E]</span>
+            </div>
+            <input type="text" id="formLocation" 
+                   class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 font-medium focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500">
+          </div>
+        </div>
+
+        <!-- 4. เลือก/ไม่เลือก [Col J] & สถานะขั้นตอนการสมัคร -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs sm:text-sm font-bold text-slate-800">เทียร์ลิสต์</label>
+              <span class="text-xs text-slate-400 font-mono font-normal">[Col J]</span>
+            </div>
+            <select id="formTier" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 font-bold focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500">
+              <option value="✅">🟢 เอา — ✅ ผ่าน QC</option>
+              <option value="✅🔄">🟡 เอา — ✅🔄 เช็กเพิ่ม</option>
+              <option value="🔄✅">🟣 สำรองเด่น — 🔄✅</option>
+              <option value="🔄">🟠 สำรอง — 🔄</option>
+              <option value="❌">🔴 ไม่เอา — ❌ ปัดตก</option>
+            </select>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs sm:text-sm font-bold text-slate-800">สถานะขั้นตอนการสมัคร</label>
+              <span class="text-xs text-slate-400 font-mono font-normal">[Col R/T]</span>
+            </div>
+            <select id="formColumn" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 font-bold focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500">
+              <option value="target">🎯 เล็งไว้ (ยังไม่ยื่น)</option>
+              <option value="applied">✈️ ส่งใบสมัครแล้ว</option>
+              <option value="following_up">🟣 โทร/เมลตามผลแล้ว</option>
+              <option value="interview">💼 นัดสัมภาษณ์แล้ว (Col R)</option>
+              <option value="accepted">🏆 ได้ที่ฝึกงานแล้ว! (Col T)</option>
+              <option value="dropped">⚪ ปัดตก / ไม่สมัคร</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 5. ลิงก์สมัคร & ช่องทางติดต่อ [Col L] -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs sm:text-sm font-bold text-slate-800">ลิงก์สมัคร / เว็บไซต์</label>
+              <span class="text-xs text-slate-400 font-mono font-normal">[Col B]</span>
+            </div>
+            <input type="text" id="formApplyUrl" 
+                   class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 font-mono text-xs sm:text-sm focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500">
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs sm:text-sm font-bold text-slate-800">ช่องทางติดต่อ</label>
+              <span class="text-xs text-slate-400 font-mono font-normal">[Col L]</span>
+            </div>
+            <textarea id="formContact" rows="3" 
+                      class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-2xl text-slate-800 font-mono text-xs sm:text-sm focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500"></textarea>
+          </div>
+        </div>
+
+        <!-- 6. บันทึกการติดตามผล [Col O] -->
+        <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs sm:text-sm font-bold text-amber-900">
+              บันทึกการติดตามผล / สนใจส่ง Mail
+            </label>
+            <span class="text-xs text-slate-500 font-mono font-normal">[Col O]</span>
+          </div>
+          <textarea id="formFollowup" rows="4" 
+                    class="w-full px-4 py-3 bg-white border border-amber-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 leading-relaxed min-h-[90px]"></textarea>
+        </div>
+
+        <!-- 7. เหตุผลการตัดสินใจ [Col K] -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs sm:text-sm font-bold text-slate-800">เหตุผลที่สนใจ / การตัดสินใจ</label>
+            <span class="text-xs text-slate-400 font-mono font-normal">[Col K]</span>
+          </div>
+          <textarea id="formReason" rows="3" 
+                    class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 leading-relaxed"></textarea>
+        </div>
+
+        <!-- 8. บริษัททำเกี่ยวกับอะไร [Col C] -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs sm:text-sm font-bold text-slate-800">บริษัททำเกี่ยวกับอะไร / ช่องทางรายได้</label>
+            <span class="text-xs text-slate-400 font-mono font-normal">[Col C]</span>
+          </div>
+          <textarea id="formAbout" rows="3" 
+                    class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 leading-relaxed"></textarea>
+        </div>
+
+        <!-- 9. ตัวอย่างสินค้า / บริการ [Col D] -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs sm:text-sm font-bold text-slate-800">ตัวอย่างสินค้า / บริการที่บริษัทขาย</label>
+            <span class="text-xs text-slate-400 font-mono font-normal">[Col D]</span>
+          </div>
+          <textarea id="formBizType" rows="3" 
+                    class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 leading-relaxed"></textarea>
+        </div>
+
+        <!-- 10. รายละเอียดสถานที่ทำงาน [Col F] -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs sm:text-sm font-bold text-slate-800">รายละเอียดสถานที่ทำงาน & การเดินทาง</label>
+            <span class="text-xs text-slate-400 font-mono font-normal">[Col F]</span>
+          </div>
+          <textarea id="formLocDesc" rows="3" 
+                    class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 leading-relaxed"></textarea>
+        </div>
+
+        <!-- 11. สวัสดิการและเบี้ยเลี้ยง [Col I] -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs sm:text-sm font-bold text-slate-800">สวัสดิการและเบี้ยเลี้ยง</label>
+            <span class="text-xs text-slate-400 font-mono font-normal">[Col I]</span>
+          </div>
+          <textarea id="formWelfare" rows="4" 
+                    class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 leading-relaxed min-h-[90px]"></textarea>
+        </div>
+
+        <!-- 12. สถานะ เปิดสมัคร [Col N] & สถานะประกาศฝึกงาน [Col M] -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs sm:text-sm font-bold text-slate-800">สถานะเปิดรับ</label>
+              <span class="text-xs text-slate-400 font-mono font-normal">[Col N]</span>
+            </div>
+            <select id="formStatusOpen" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 font-bold focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500">
+              <option value="✅">🟢 เปิดรับสมัคร</option>
+              <option value="🔄">🟡 รอตรวจสอบ</option>
+              <option value="❌">🔴 ปิดรับแล้ว</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs sm:text-sm font-bold text-slate-800">รายละเอียดประกาศฝึกงาน</label>
+              <span class="text-xs text-slate-400 font-mono font-normal">[Col M]</span>
+            </div>
+            <input type="text" id="formStatusRecruit" 
+                   class="w-full px-4 py-3 bg-white border border-slate-300 rounded-2xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Sticky Footer (Editable & Real-Time Sync) -->
+      <div class="px-6 sm:px-8 py-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between gap-3 shrink-0">
+        <button type="button" onclick="closeEditModal()" class="btn-interactive px-5 py-2.5 rounded-2xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-sm cursor-pointer">
+          ยกเลิก
+        </button>
+        <button type="button" onclick="saveEditModal()" class="btn-interactive px-6 py-2.5 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold text-sm shadow-md shadow-sky-600/25 flex items-center gap-2 cursor-pointer">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span>บันทึกการแก้ไข (ซิงก์ Google Sheet)</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 2: SMART CALL & HR SCRIPT COMPANION (เวลากดปุ่มโทร!) -->
+  <!-- ======================================================== -->
+  <div id="smartCallModal" class="fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-emerald-200 overflow-hidden animate-in">
+      
+      <!-- Top Call Header -->
+      <div class="p-6 bg-gradient-to-br from-emerald-500 via-teal-600 to-sky-600 text-white relative">
+        <button onclick="closeSmartCallModal()" class="btn-interactive absolute right-4 top-4 w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white flex items-center justify-center cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+        <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/20 text-white text-xs font-bold mb-2">
+          <i data-lucide="phone-call" class="w-3.5 h-3.5 animate-bounce"></i> โหมดผู้ช่วยโทรคุยกับ HR
+        </div>
+        <h3 id="callModalCompany" class="text-xl sm:text-2xl font-extrabold leading-tight">Company Name</h3>
+        <p id="callModalRole" class="text-xs sm:text-sm text-emerald-50 font-medium mt-0.5">Software Engineer Intern</p>
+
+        <!-- Giant Phone Display + Actions -->
+        <div class="mt-4 p-4 rounded-2xl bg-white/15 backdrop-blur-xs border border-white/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="text-[11px] uppercase tracking-wider text-emerald-100 font-semibold">เบอร์โทรศัพท์ HR</div>
+            <div id="callModalPhoneDisplay" class="text-2xl sm:text-3xl font-extrabold tracking-wide font-mono mt-0.5">02-XXX-XXXX</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="copyCurrentCallPhone()" class="btn-interactive px-3.5 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="copy" class="w-4 h-4"></i> คัดลอกเบอร์
+            </button>
+            <a id="callModalTelHref" href="tel:" class="btn-interactive px-4 py-2.5 rounded-xl bg-white text-emerald-700 hover:bg-emerald-50 text-xs sm:text-sm font-extrabold flex items-center gap-1.5 shadow-lg cursor-pointer">
+              <i data-lucide="phone" class="w-4 h-4 fill-emerald-600"></i> โทรออกเลย
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Call Body: Auto-filled Script + Quick Note Input -->
+      <div class="p-6 space-y-4 text-sm max-h-[65vh] overflow-y-auto">
+        
+        <!-- Contact raw info -->
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 font-mono whitespace-pre-line" id="callModalRawContact"></div>
+
+        <!-- Auto-customized Script -->
+        <div class="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 space-y-2">
+          <div class="text-xs font-bold text-sky-800 flex items-center gap-1.5">
+            <i data-lucide="message-square-quote" class="w-4 h-4 text-sky-600"></i>
+            <span>โพยบทพูดสำหรับบริษัทนี้ (อ่านตามได้เลย):</span>
+          </div>
+          <p id="callModalScript" class="text-xs sm:text-sm text-slate-800 leading-relaxed font-medium"></p>
+        </div>
+
+        <!-- Quick Note while on the phone -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">📝 จดบันทึกผลการโทรสดๆ ตรงนี้ได้เลย:</label>
+          <textarea id="callModalNoteInput" rows="3" placeholder="เช่น โทรวันที่ ... พี่ HR รับสาย แจ้งว่า..." 
+                    class="w-full p-3.5 bg-white border border-slate-300 focus:border-emerald-500 focus:ring-3 focus:ring-emerald-500/15 rounded-2xl text-sm text-slate-800 focus:outline-none"></textarea>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 pt-2">
+          <button onclick="saveCallNoteAndMarkFollowingUp()" class="btn-interactive flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            <span>บันทึกผลโทร & เปลี่ยนสถานะเป็น "โทรตามแล้ว"</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT FILES (Modular Architecture) -->
+  <script src="data.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/filters.js"></script>
+  <script src="js/cards.js"></script>
+  <script src="js/kanban.js"></script>
+  <script src="js/modals.js"></script>
+  <script src="js/views.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
